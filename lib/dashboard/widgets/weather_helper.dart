@@ -4,7 +4,7 @@ import 'package:seat_booking_mobile/dashboard/widgets/weather_widget.dart';
 
 import '../client/location_helper.dart';
 import '../client/weather_client.dart';
-import '../models/weather_model.dart';
+import '../../models/weather_model.dart';
 
 class WeatherSnippet extends StatefulWidget {
   const WeatherSnippet({super.key, required this.apiKey});

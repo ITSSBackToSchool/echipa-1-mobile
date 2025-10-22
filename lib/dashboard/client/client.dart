@@ -1,4 +1,4 @@
-import '../models/desk.dart';
+import '../../models/desk.dart';
 
 class DeskReservationClient {
   static const _desks = [

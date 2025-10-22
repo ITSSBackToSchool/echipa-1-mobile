@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:seat_booking_mobile/dashboard/widgets/desk_card.dart';
 import 'package:seat_booking_mobile/dashboard/widgets/weather_helper.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-import 'client/client.dart';
-import 'models/desk.dart';
+import '../models/seat.dart';
+import '../services/api_client.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int buildingId;
+  final String buildingName;
+  final ApiClient apiClient;
+
+  const DashboardScreen({
+    super.key,
+    required this.buildingId,
+    required this.buildingName,
+    required this.apiClient,
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -25,10 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late DateTime selectedDay = DateTime(today.year, today.month, today.day);
   late DateTime focusedDay = DateTime(today.year, today.month, today.day);
 
-  final _client = DeskReservationClient();
-
-  List<Desk> _desks = const [];
-  Map<String, String> _reservationsForSelected = const {};
+  List<Seat> _seats = const [];
   bool _isLoading = true;
   String? _error;
 
@@ -37,25 +42,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _initLoad();
+    _loadAvailableSeats();
   }
 
-  Future<void> _initLoad() async {
+  Future<void> _loadAvailableSeats() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
     try {
-      final desks = await _client.fetchDesks();
-      final reservations = await _client.fetchReservationsFor(selectedDay);
+      final seats = await widget.apiClient.getAvailableSeats(
+        date: selectedDay,
+        buildingId: widget.buildingId,
+      );
       setState(() {
-        _desks = desks;
-        _reservationsForSelected = reservations;
+        _seats = seats;
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load data: $e';
+        _error = 'Failed to load available seats: $e';
         _isLoading = false;
       });
     }
@@ -65,76 +71,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       selectedDay = _stripTime(date);
       focusedDay = selectedDay;
-      _isLoading = true;
-      _error = null;
     });
-    try {
-      final reservations = await _client.fetchReservationsFor(selectedDay);
-      setState(() {
-        _reservationsForSelected = reservations;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _error = 'Failed to load reservations: $e';
-        _isLoading = false;
-      });
-    }
+    await _loadAvailableSeats();
   }
 
-  String? _reserverFor(String deskId) => _reservationsForSelected[deskId];
-
-  Future<void> _onTapDesk(Desk desk) async {
-    final reserverName = await _showReserveDialog(context, desk, selectedDay);
-    if (reserverName == null || reserverName.trim().isEmpty) return;
+  Future<void> _onTapSeat(Seat seat) async {
+    final confirmed = await _showReserveDialog(context, seat, selectedDay);
+    if (confirmed != true) return;
 
     // Show loading while calling reserve
     setState(() => _isLoading = true);
     try {
-      await _client.reserveDesk(
-        deskId: desk.id,
-        day: selectedDay,
-        reserverName: reserverName.trim(),
+      await widget.apiClient.createReservation(
+        seatId: seat.id,
+        reservationDate: selectedDay,
       );
-      // Reload reservations for the same date
-      final reservations = await _client.fetchReservationsFor(selectedDay);
-      setState(() {
-        _reservationsForSelected = reservations;
-        _isLoading = false;
-      });
+
+      // Reload available seats for the same date
+      await _loadAvailableSeats();
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Reserved ${desk.name} for $reserverName')),
+          SnackBar(content: Text('Reserved ${seat.seatNumber} successfully!')),
         );
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
+          SnackBar(content: Text('Failed to reserve: $e'), backgroundColor: Colors.red),
         );
       }
     }
-  }
-
-  void _showAlreadyReservedNotice(BuildContext context, Desk desk) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${desk.name} is already reserved for '
-          '${selectedDay.day}/${selectedDay.month}/${selectedDay.year}',
-        ),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Dashboard',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          '${widget.buildingName} - Book a Seat',
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         actions: [
           Padding(
@@ -173,36 +150,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
                 if (_error != null) {
                   return Center(
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            _error!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _loadAvailableSeats,
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
-                if (_desks.isEmpty) {
-                  return const Center(child: Text('No desks available.'));
+                if (_seats.isEmpty) {
+                  return const Center(
+                    child: Text('No seats available for this date.'),
+                  );
                 }
 
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(12, 8, 12, 16),
-                  itemCount: _desks.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemCount: _seats.length,
+                  separatorBuilder: (_, _) => const SizedBox(height: 8),
                   itemBuilder: (context, index) {
-                    final desk = _desks[index];
-                    final reserver = _reserverFor(desk.id);
-                    final isFree = reserver == null;
+                    final seat = _seats[index];
 
-                    return DeskCard(
-                      desk: desk,
-                      reserver: reserver,
-                      isFree: isFree,
-                      onTap: () {
-                        if (isFree) {
-                          _onTapDesk(desk);
-                        } else {
-                          _showAlreadyReservedNotice(context, desk);
-                        }
-                      }, // << trigger popup + reserve call
+                    return Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.event_seat, size: 32),
+                        title: Text(
+                          seat.seatNumber,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        subtitle: seat.roomName != null
+                            ? Text('Room: ${seat.roomName}')
+                            : null,
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                        onTap: () => _onTapSeat(seat),
+                      ),
                     );
                   },
                 );
@@ -216,73 +212,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 /// -------- Reserve Dialog --------
-Future<String?> _showReserveDialog(
+Future<bool?> _showReserveDialog(
   BuildContext context,
-  Desk desk,
+  Seat seat,
   DateTime date,
 ) async {
-  final controller = TextEditingController();
-  return showDialog<String>(
+  return showDialog<bool>(
     context: context,
     builder: (context) {
-      bool isSubmitting = false;
-      return StatefulBuilder(
-        builder: (context, setLocalState) {
-          return AlertDialog(
-            title: Text('Reserve ${desk.name}'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Date: ${date.day}/${date.month}/${date.year}'),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: controller,
-                  decoration: const InputDecoration(
-                    labelText: 'Your name',
-                    border: OutlineInputBorder(),
-                  ),
-                  enabled: !isSubmitting,
-                ),
-              ],
+      return AlertDialog(
+        title: const Text('Confirm Reservation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Seat: ${seat.seatNumber}',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            actions: [
-              TextButton(
-                onPressed: isSubmitting ? null : () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () async {
-                        final name = controller.text.trim();
-                        if (name.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter your name'),
-                            ),
-                          );
-                          return;
-                        }
-                        // Return the name to caller; actual reserve happens outside.
-                        setLocalState(() => isSubmitting = true);
-                        // Slight delay to show button disabled state in dialog
-                        await Future.delayed(const Duration(milliseconds: 150));
-                        // Close and return the name
-                        // ignore: use_build_context_synchronously
-                        Navigator.pop(context, name);
-                      },
-                child: isSubmitting
-                    ? const SizedBox(
-                        height: 18,
-                        width: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Reserve'),
-              ),
+            if (seat.roomName != null) ...[
+              const SizedBox(height: 4),
+              Text('Room: ${seat.roomName}'),
             ],
-          );
-        },
+            const SizedBox(height: 8),
+            Text('Date: ${date.day}/${date.month}/${date.year}'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reserve'),
+          ),
+        ],
       );
     },
   );
