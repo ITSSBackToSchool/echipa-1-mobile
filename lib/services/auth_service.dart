@@ -21,7 +21,7 @@ class AuthService {
   Future<bool> login() async {
     try {
       final credentials = await _auth0
-          .webAuthentication(scheme: 'com.example.seatBookingMobile')
+          .webAuthentication(scheme: 'com.example.seatbookingmobile')
           .login(
             parameters: {
               'audience': 'https://api.deskops.com'
@@ -46,7 +46,7 @@ class AuthService {
   Future<void> logout() async {
     try {
       await _auth0
-          .webAuthentication(scheme: 'com.example.seatBookingMobile')
+          .webAuthentication(scheme: 'com.example.seatbookingmobile')
           .logout();
     } catch (e) {
       if (kDebugMode) {

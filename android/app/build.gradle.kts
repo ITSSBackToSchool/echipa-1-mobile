@@ -31,7 +31,7 @@ android {
 
         // Auth0 manifest placeholders
         manifestPlaceholders["auth0Domain"] = "deskops.eu.auth0.com"
-        manifestPlaceholders["auth0Scheme"] = "com.example.seatBookingMobile"
+        manifestPlaceholders["auth0Scheme"] = "com.example.seatbookingmobile"
     }
 
     buildTypes {

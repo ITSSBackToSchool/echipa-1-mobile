@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -12,7 +13,14 @@ class ApiClient {
   late final String _baseUrl;
 
   ApiClient(this._authService) {
-    _baseUrl = dotenv.env['BACKEND_URL'] ?? 'http://localhost:8080';
+    // Use platform-specific backend URL
+    if (Platform.isAndroid) {
+      _baseUrl = dotenv.env['BACKEND_URL_ANDROID'] ?? 'http://10.0.2.2:8080';
+    } else if (Platform.isIOS) {
+      _baseUrl = dotenv.env['BACKEND_URL_IOS'] ?? 'http://localhost:8080';
+    } else {
+      _baseUrl = dotenv.env['BACKEND_URL_IOS'] ?? 'http://localhost:8080';
+    }
   }
 
   Future<Map<String, String>> _getHeaders() async {
@@ -129,6 +137,9 @@ class ApiClient {
       return reservationsList
           .map((json) => Reservation.fromJson(json))
           .toList();
+    } else if (response.statusCode == 404) {
+      // 404 means no reservations found - return empty list
+      return [];
     } else {
       throw Exception(
           'Failed to load reservations: ${response.statusCode}');
