@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:seat_booking_mobile/dashboard/widgets/desk_card.dart';
 import 'package:seat_booking_mobile/dashboard/widgets/weather_helper.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'client/client.dart';
 import 'models/desk.dart';
@@ -138,7 +139,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 12),
-            child: Center(child: WeatherSnippet(apiKey: 'your_api_key')),
+            child: Center(child: WeatherSnippet(apiKey: dotenv.env['WEATHER_API_KEY'] ?? '')),
           ),
         ],
       ),
