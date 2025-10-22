@@ -28,6 +28,10 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Auth0 manifest placeholders
+        manifestPlaceholders["auth0Domain"] = "deskops.eu.auth0.com"
+        manifestPlaceholders["auth0Scheme"] = "com.example.seatbookingmobile"
     }
 
     buildTypes {
