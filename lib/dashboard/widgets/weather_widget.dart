@@ -6,9 +6,10 @@ class WeatherWidget extends StatelessWidget {
   final WeatherInfo info;
   const WeatherWidget({super.key, required this.info});
 
-  IconData _toIcon(WeatherIcon w) {
+  IconData _toIcon(WeatherIcon w, bool isNight) {
     switch (w) {
-      case WeatherIcon.sun: return Icons.wb_sunny_rounded;
+      case WeatherIcon.sun:
+        return isNight ? Icons.nightlight_round : Icons.wb_sunny_rounded;
       case WeatherIcon.cloud: return Icons.cloud_rounded;
       case WeatherIcon.rain: return Icons.umbrella_rounded;
       case WeatherIcon.snow: return Icons.ac_unit_rounded;
@@ -30,7 +31,7 @@ class WeatherWidget extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(_toIcon(info.icon), size: 18),
+          Icon(_toIcon(info.icon, info.isNight), size: 18),
           const SizedBox(width: 6),
           Text('${info.tempC.toStringAsFixed(0)}°C'),
         ],

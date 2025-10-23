@@ -29,14 +29,26 @@ class WeatherClient {
     final main = data['main'] as Map<String, dynamic>? ?? {};
     final weatherList = (data['weather'] as List?) ?? const [];
     final weather = weatherList.isNotEmpty ? weatherList.first as Map<String, dynamic> : {};
+    final sys = data['sys'] as Map<String, dynamic>? ?? {};
 
     final double tempC = (main['temp'] as num?)?.toDouble() ?? 0.0;
+    final double feelsLike = (main['feels_like'] as num?)?.toDouble() ?? tempC;
     final int? id = weather['id'] as int?;
     final String? group = weather['main'] as String?;
+    final String? iconCode = weather['icon'] as String?; // e.g., "01d" or "01n"
+    final String cityName = data['name'] as String? ?? 'Unknown';
+    final String countryCode = sys['country'] as String? ?? '';
+
+    // Check if it's night (icon code ends with 'n')
+    final bool isNight = iconCode?.endsWith('n') ?? false;
 
     return WeatherInfo(
       tempC: tempC,
+      feelsLike: feelsLike,
       icon: _mapToIcon(id: id, group: group),
+      cityName: cityName,
+      countryCode: countryCode,
+      isNight: isNight,
     );
   }
 

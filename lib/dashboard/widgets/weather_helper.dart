@@ -39,8 +39,6 @@ class _WeatherSnippetState extends State<WeatherSnippet> {
         lon: pos.longitude,
       );
 
-      // Or by city: final info = await _client.fetchByCity(city: 'Bucharest', countryCode: 'RO');
-
       setState(() => _info = info);
     } catch (e) {
       setState(() => _error = e.toString());

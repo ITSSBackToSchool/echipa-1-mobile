@@ -33,14 +33,20 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       } else if (mounted) {
         setState(() {
-          _errorMessage = 'Login failed. Please try again.';
+          _errorMessage = 'Login was cancelled or failed. Please try again.';
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
+        // Better error message
+        String errorMsg = 'Login cancelled or failed. Please try again.';
+        if (e.toString().contains('UserCancelledAuthException')) {
+          errorMsg = 'Login cancelled. Please try again when ready.';
+        }
+
         setState(() {
-          _errorMessage = 'Login error: $e';
+          _errorMessage = errorMsg;
           _isLoading = false;
         });
       }

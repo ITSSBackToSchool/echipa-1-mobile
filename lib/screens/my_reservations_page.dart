@@ -27,8 +27,11 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
 
   void _applyFilter() {
     setState(() {
-      if (_selectedFilter == 'All') {
-        _filteredReservations = _reservations;
+      if (_selectedFilter == 'Past') {
+        // "Past" filter shows "Completed" reservations
+        _filteredReservations = _reservations
+            .where((r) => r.status.toUpperCase() == 'COMPLETED')
+            .toList();
       } else {
         _filteredReservations = _reservations
             .where((r) =>
@@ -116,7 +119,7 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Reservations'),
+        title: const Text('DeskOps'),
         centerTitle: true,
         backgroundColor: Colors.white,
         foregroundColor: Colors.black,
@@ -139,20 +142,25 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.black),
-                    borderRadius: BorderRadius.circular(4),
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: _selectedFilter,
                       isExpanded: true,
-                      items: ['Active', 'Completed', 'Cancelled', 'All']
+                      icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+                      items: ['Active', 'Past', 'Cancelled']
                           .map((String value) {
                         return DropdownMenuItem<String>(
                           value: value,
-                          child: Text(value),
+                          child: Text(
+                            value,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         );
                       }).toList(),
                       onChanged: (String? newValue) {
@@ -171,7 +179,7 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                   'My Reservations',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -203,29 +211,32 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                         ),
                       )
                     : _filteredReservations.isEmpty
-                  ? const Center(
+                  ? Center(
                       child: Padding(
-                        padding: EdgeInsets.all(24.0),
+                        padding: const EdgeInsets.all(24.0),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
                               Icons.calendar_today_outlined,
                               size: 64,
-                              color: Colors.grey,
+                              color: Colors.grey.shade400,
                             ),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Text(
-                              'No reservations found',
-                              style: TextStyle(
+                              _getEmptyStateTitle(),
+                              style: const TextStyle(
                                 fontSize: 18,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
-                              'Book a desk to see your reservations here',
-                              style: TextStyle(color: Colors.grey),
+                              _getEmptyStateSubtitle(),
+                              style: TextStyle(
+                                color: Colors.grey.shade600,
+                                fontSize: 14,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                           ],
@@ -235,127 +246,11 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
                   : RefreshIndicator(
                       onRefresh: _loadReservations,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
                         itemCount: _filteredReservations.length,
                         itemBuilder: (context, index) {
                           final reservation = _filteredReservations[index];
-                          final isPast = reservation.reservationDate
-                              .isBefore(DateTime.now());
-
-                          return Card(
-                            margin: const EdgeInsets.only(bottom: 12),
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.event_seat,
-                                        size: 32,
-                                        color: isPast
-                                            ? Colors.grey
-                                            : Colors.black,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              reservation.seatNumber ??
-                                                  'Seat ${reservation.seatId}',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w600,
-                                                color: isPast
-                                                    ? Colors.grey
-                                                    : Colors.black,
-                                              ),
-                                            ),
-                                            if (reservation.roomName !=
-                                                null) ...[
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                'Room: ${reservation.roomName}',
-                                                style: TextStyle(
-                                                  fontSize: 14,
-                                                  color: Colors.grey.shade600,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 12,
-                                          vertical: 6,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: _getStatusColor(
-                                                  reservation.status)
-                                              .withValues(alpha: 0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                          border: Border.all(
-                                            color:
-                                                _getStatusColor(reservation.status),
-                                          ),
-                                        ),
-                                        child: Text(
-                                          reservation.status,
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: _getStatusColor(
-                                                reservation.status),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 16,
-                                        color: Colors.grey.shade600,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '${reservation.reservationDate.day}/${reservation.reservationDate.month}/${reservation.reservationDate.year}',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey.shade600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  if (!isPast &&
-                                      reservation.status != 'CANCELLED') ...[
-                                    const SizedBox(height: 12),
-                                    SizedBox(
-                                      width: double.infinity,
-                                      child: OutlinedButton(
-                                        onPressed: () =>
-                                            _cancelReservation(reservation),
-                                        style: OutlinedButton.styleFrom(
-                                          foregroundColor: Colors.red,
-                                          side: const BorderSide(
-                                              color: Colors.red),
-                                        ),
-                                        child: const Text('Cancel Reservation'),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          );
+                          return _buildReservationCard(reservation);
                         },
                       ),
                     ),
@@ -363,6 +258,268 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildReservationCard(Reservation reservation) {
+    final isActive = reservation.status.toUpperCase() == 'ACTIVE';
+    final isCancelled = reservation.status.toUpperCase() == 'CANCELLED';
+
+    // Format date
+    final date = reservation.reservationDate;
+    final formattedDate = '${_getMonthAbbreviation(date.month)} ${date.day}, ${date.year}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header: Desk badge + Status badge
+          Row(
+            children: [
+              // Desk number badge (blue)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4169E1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  reservation.seatNumber ?? 'Desk ${reservation.seatId}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              // Status badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isActive
+                      ? Colors.green.shade50
+                      : isCancelled
+                          ? Colors.red.shade50
+                          : Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isActive
+                        ? Colors.green
+                        : isCancelled
+                            ? Colors.red
+                            : Colors.grey,
+                  ),
+                ),
+                child: Text(
+                  isActive
+                      ? 'Active'
+                      : isCancelled
+                          ? 'Cancelled'
+                          : 'Completed',
+                  style: TextStyle(
+                    color: isActive
+                        ? Colors.green.shade700
+                        : isCancelled
+                            ? Colors.red.shade700
+                            : Colors.grey.shade700,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Building and floor info
+          if (reservation.roomName != null) ...[
+            Row(
+              children: [
+                Icon(Icons.business, size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    reservation.roomName!,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            Row(
+              children: [
+                Icon(Icons.business, size: 16, color: Colors.grey.shade600),
+                const SizedBox(width: 8),
+                Text(
+                  'Building A - Main Campus',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: Text(
+                'Floor 3',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          // Date
+          Row(
+            children: [
+              Icon(Icons.calendar_today_outlined,
+                  size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              Text(
+                formattedDate,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Time
+          Row(
+            children: [
+              Icon(Icons.access_time, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+              Text(
+                '9:00 AM - 5:00 PM',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+            ],
+          ),
+          // Buttons (only for active reservations)
+          if (isActive) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Cancel button
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _cancelReservation(reservation),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.black,
+                      side: BorderSide(color: Colors.grey.shade300),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'Cancel',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                // View Details button
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      // TODO: Navigate to details screen
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4169E1),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'View Details',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getEmptyStateTitle() {
+    switch (_selectedFilter) {
+      case 'Active':
+        return 'No active reservations';
+      case 'Past':
+        return 'No past reservations';
+      case 'Cancelled':
+        return 'No cancelled reservations';
+      default:
+        return 'No reservations found';
+    }
+  }
+
+  String _getEmptyStateSubtitle() {
+    switch (_selectedFilter) {
+      case 'Active':
+        return 'Book a desk to see your active reservations here';
+      case 'Past':
+        return 'Your completed reservations will appear here';
+      case 'Cancelled':
+        return 'No cancelled reservations found';
+      default:
+        return 'Book a desk to see your reservations here';
+    }
+  }
+
+  String _getMonthAbbreviation(int month) {
+    const months = [
+      '',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return months[month];
   }
 
   Color _getStatusColor(String status) {
