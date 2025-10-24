@@ -44,18 +44,8 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    try {
-      await _auth0
-          .webAuthentication(scheme: 'com.example.seatbookingmobile')
-          .logout();
-    } catch (e) {
-      if (kDebugMode) {
-        print('Logout error: $e');
-      }
-    } finally {
-      // Clear stored tokens regardless of logout success
-      await _clearTokens();
-    }
+    // Clear stored tokens locally (no browser popup)
+    await _clearTokens();
   }
 
   Future<String?> getAccessToken() async {

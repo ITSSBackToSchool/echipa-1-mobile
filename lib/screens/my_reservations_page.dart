@@ -521,18 +521,4 @@ class _MyReservationsPageState extends State<MyReservationsPage> {
     ];
     return months[month];
   }
-
-  Color _getStatusColor(String status) {
-    switch (status.toUpperCase()) {
-      case 'ACTIVE':
-      case 'CONFIRMED':
-        return Colors.green;
-      case 'CANCELLED':
-        return Colors.red;
-      case 'COMPLETED':
-        return Colors.grey;
-      default:
-        return Colors.blue;
-    }
-  }
 }
